@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>科研費取得合計算出ツール</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-alt: #f0f2f5;
+    --border: #dfe3e8;
+    --text: #1a1a2e;
+    --text-secondary: #5c6370;
+    --text-muted: #8b919a;
+    --accent: #1e3a5f;
+    --accent-light: #2d5a8e;
+    --accent-bg: #eef3f9;
+    --success: #0d7c5f;
+    --success-bg: #e6f7f1;
+    --warning: #b8860b;
+    --warning-bg: #fef9e7;
+    --error: #c0392b;
+    --error-bg: #fdecea;
+    --gold: #c9a227;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ──── Header ──── */
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #1e3a5f 50%, #2d5a8e 100%);
+    padding: 2.5rem 1.5rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .header h1 {
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    position: relative;
+  }
+  .header h1 .icon { font-size: 1.3rem; margin-right: 0.5rem; }
+  .header .subtitle {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.82rem;
+    margin-top: 0.4rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+  }
+
+  /* ──── Main Container ──── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  /* ──── Card ──── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-alt);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .card-header h2 {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.03em;
+  }
+  .card-header .badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .card-body { padding: 1.5rem; }
+
+  /* ──── Form ──── */
+  .form-group {
+    margin-bottom: 1.2rem;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+  .form-group label .required {
+    color: var(--error);
+    font-size: 0.75rem;
+    margin-left: 0.3rem;
+  }
+  .form-group label .optional {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-left: 0.3rem;
+    font-weight: 400;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .form-group input:focus {
+    border-color: var(--accent-light);
+    box-shadow: 0 0 0 3px rgba(30,58,95,0.1);
+  }
+  .form-group input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+  .form-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    line-height: 1.5;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  /* ──── Collapsible settings ──── */
+  .settings-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 0.8rem;
+    padding: 0.3rem 0;
+    border: none;
+    background: none;
+    font-family: inherit;
+  }
+  .settings-toggle:hover { color: var(--text-secondary); }
+  .settings-toggle .arrow {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.65rem;
+  }
+  .settings-toggle .arrow.open { transform: rotate(90deg); }
+  .settings-content {
+    display: none;
+    margin-bottom: 1rem;
+  }
+  .settings-content.open { display: block; }
+
+  /* ──── Button ──── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 2rem;
+    border: none;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-light);
+    box-shadow: var(--shadow-md);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: var(--surface-alt);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+
+  .btn-group {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* ──── Spinner ──── */
+  .spinner {
+    display: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading .spinner { display: block; }
+
+  /* ──── Status message ──── */
+  .status-bar {
+    display: none;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.82rem;
+    margin-top: 1rem;
+    line-height: 1.6;
+  }
+  .status-bar.show { display: block; }
+  .status-bar.info { background: var(--accent-bg); color: var(--accent); }
+  .status-bar.error { background: var(--error-bg); color: var(--error); }
+  .status-bar.success { background: var(--success-bg); color: var(--success); }
+
+  /* ──── Results ──── */
+  #results { display: none; }
+  #results.show { display: block; }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .summary-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.2rem 1.3rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .summary-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+  }
+  .summary-item.total::before { background: var(--gold); }
+  .summary-item.count::before { background: var(--accent); }
+  .summary-item.available::before { background: var(--success); }
+  .summary-item .label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+  .summary-item .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .summary-item.total .value { color: var(--gold); }
+  .summary-item .unit {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-left: 0.2rem;
+  }
+  .summary-item .sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+  }
+
+  /* ──── Table ──── */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .table-controls .count {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  thead {
+    background: var(--surface-alt);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  th {
+    padding: 0.65rem 0.8rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--accent); }
+  th .sort-arrow { font-size: 0.6rem; margin-left: 0.3rem; opacity: 0.4; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(30,58,95,0.02); }
+  td.amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  td.amount.zero { color: var(--text-muted); font-weight: 400; }
+  td.title-cell {
+    max-width: 300px;
+  }
+  td.title-cell a {
+    color: var(--accent-light);
+    text-decoration: none;
+    line-height: 1.5;
+  }
+  td.title-cell a:hover { text-decoration: underline; }
+  td.number { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .category-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ──── Disclaimer ──── */
+  .disclaimer {
+    background: var(--warning-bg);
+    border: 1px solid rgba(184,134,11,0.2);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin-top: 1.25rem;
+    font-size: 0.78rem;
+    color: var(--warning);
+    line-height: 1.7;
+  }
+  .disclaimer strong { font-weight: 600; }
+
+  /* ──── CSV button ──── */
+  .export-area {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+
+  /* ──── Footer ──── */
+  .footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .footer a { color: var(--accent-light); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* ──── Animation ──── */
+  .fade-in {
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span class="icon">📊</span>科研費取得合計算出ツール</h1>
+  <div class="subtitle">KAKEN 公開データベースによる科研費取得履歴の集計</div>
+</div>
+
+<div class="container">
+  <!-- Search Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2>検索条件</h2>
+    </div>
+    <div class="card-body">
+      <form id="searchForm" onsubmit="return handleSearch(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>研究者フルネーム<span class="required">*必須</span></label>
+            <input type="text" id="researcherName" placeholder="例：山田 太郎" required autofocus>
+            <div class="form-hint">姓と名の間にスペースを入れてください</div>
+          </div>
+          <div class="form-group">
+            <label>所属機関名<span class="optional">任意</span></label>
+            <input type="text" id="institution" placeholder="例：東京大学">
+            <div class="form-hint">同姓同名の区別に利用します</div>
+          </div>
+        </div>
+
+        <button type="button" class="settings-toggle" onclick="toggleSettings()">
+          <span class="arrow" id="settingsArrow">▶</span>
+          API設定
+        </button>
+        <div class="settings-content" id="settingsContent">
+          <div class="form-group">
+            <label>CiNii Application ID<span class="optional">任意</span></label>
+            <input type="text" id="appid" placeholder="取得済みのappidを入力">
+            <div class="form-hint">
+              <a href="https://support.nii.ac.jp/ja/cinii/api/developer" target="_blank" rel="noopener">
+                CiNii API利用登録ページ
+              </a>
+              で取得できます。未入力でも基本的な検索は可能です。
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary" id="searchBtn">
+            <span id="searchBtnText">検索・集計</span>
+            <span class="spinner" id="searchSpinner"></span>
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="clearForm()">クリア</button>
+        </div>
+      </form>
+
+      <div class="status-bar" id="statusBar"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <!-- Summary -->
+    <div class="summary-grid fade-in" id="summaryGrid">
+      <div class="summary-item total">
+        <div class="label">科研費合計額</div>
+        <div class="value" id="totalAmount">-</div>
+        <div class="sub" id="totalAmountSub"></div>
+      </div>
+      <div class="summary-item total" style="--gold: #1e6e3e;">
+        <div class="label">代表のみ合計額</div>
+        <div class="value" id="piAmount" style="color: #1e6e3e;">-</div>
+        <div class="sub" id="piAmountSub"></div>
+      </div>
+      <div class="summary-item count">
+        <div class="label">総課題数</div>
+        <div class="value" id="totalProjects">-</div>
+        <div class="sub" id="roleCountSub"></div>
+      </div>
+      <div class="summary-item available">
+        <div class="label">金額取得可能</div>
+        <div class="value" id="amountAvailable">-</div>
+        <div class="sub" id="amountUnavailableSub"></div>
+      </div>
+    </div>
+
+    <!-- Project table -->
+    <div class="card fade-in">
+      <div class="card-header">
+        <h2>課題一覧</h2>
+        <span class="badge" id="tableBadge" style="background: var(--accent-bg); color: var(--accent);"></span>
+      </div>
+      <div class="card-body">
+        <div class="table-controls">
+          <div class="count" id="tableCount"></div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="exportCSV()" style="padding: 0.4rem 1rem; font-size: 0.78rem;">
+              CSV出力
+            </button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="projectTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable(0)">No.<span class="sort-arrow">▼</span></th>
+                <th onclick="sortTable(1)">課題番号<span class="sort-arrow">▼</span></th>
+                <th onclick="sortTable(2)">課題名<span class="sort-arrow">▼</span></th>
+                <th onclick="sortTable(3)">役割<span class="sort-arrow">▼</span></th>
+                <th onclick="sortTable(4)">研究種目<span class="sort-arrow">▼</span></th>
+                <th onclick="sortTable(5)">研究期間<span class="sort-arrow">▼</span></th>
+                <th onclick="sortTable(6)">配分額<span class="sort-arrow">▼</span></th>
+              </tr>
+            </thead>
+            <tbody id="projectTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer fade-in">
+      <strong>⚠ ご注意</strong><br>
+      ・本ツールは <a href="https://kaken.nii.ac.jp/" target="_blank" rel="noopener">KAKEN（科学研究費助成事業データベース）</a> の公開情報に基づく集計です。<br>
+      ・金額未公開の課題は合計に含まれていません。<br>
+      ・同姓同名の研究者の課題が含まれている可能性があります。所属機関を確認してください。<br>
+      ・表示される合計額は参考値であり、正式な金額を保証するものではありません。
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  科研費取得合計算出ツール v1.0 ｜ データ出典：<a href="https://kaken.nii.ac.jp/" target="_blank" rel="noopener">KAKEN</a>（国立情報学研究所）
+</div>
+
+<script>
+  // ──── State ────
+  let currentProjects = [];
+  let sortCol = -1;
+  let sortAsc = true;
+
+  // ──── Settings toggle ────
+  function toggleSettings() {
+    const content = document.getElementById('settingsContent');
+    const arrow = document.getElementById('settingsArrow');
+    const isOpen = content.classList.toggle('open');
+    arrow.classList.toggle('open', isOpen);
+  }
+
+  // ──── Status helpers ────
+  function showStatus(msg, type = 'info') {
+    const bar = document.getElementById('statusBar');
+    bar.textContent = msg;
+    bar.className = 'status-bar show ' + type;
+  }
+  function hideStatus() {
+    document.getElementById('statusBar').className = 'status-bar';
+  }
+
+  // ──── Search handler ────
+  async function handleSearch(e) {
+    e.preventDefault();
+    const name = document.getElementById('researcherName').value.trim();
+    const institution = document.getElementById('institution').value.trim();
+    const appid = document.getElementById('appid').value.trim();
+
+    if (!name) {
+      showStatus('研究者名を入力してください', 'error');
+      return false;
+    }
+
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    document.getElementById('searchBtnText').textContent = '検索中...';
+    document.getElementById('results').style.display = 'none';
+    showStatus(`「${name}」で検索中です。しばらくお待ちください...`, 'info');
+
+    try {
+      const params = new URLSearchParams({ name });
+      if (institution) params.append('institution', institution);
+      if (appid) params.append('appid', appid);
+
+      const resp = await fetch(`/api/search?${params}`);
+      const data = await resp.json();
+
+      if (data.error) {
+        showStatus(data.error, 'error');
+        return false;
+      }
+
+      renderResults(data);
+      hideStatus();
+    } catch (err) {
+      showStatus(`通信エラー: ${err.message}。サーバー (python server.py) が起動しているか確認してください。`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      document.getElementById('searchBtnText').textContent = '検索・集計';
+    }
+
+    return false;
+  }
+
+  // ──── Render ────
+  function renderResults(data) {
+    currentProjects = data.projects || [];
+
+    // Summary
+    document.getElementById('totalAmount').innerHTML =
+      formatCurrency(data.total_amount) + '<span class="unit">円</span>';
+    document.getElementById('totalAmountSub').textContent =
+      data.total_amount > 0 ? `（${formatManYen(data.total_amount)}）` : '';
+
+    // PI-only
+    const piAmount = data.pi_amount || 0;
+    document.getElementById('piAmount').innerHTML =
+      formatCurrency(piAmount) + '<span class="unit" style="color:var(--text-secondary)">円</span>';
+    document.getElementById('piAmountSub').textContent =
+      piAmount > 0 ? `（${formatManYen(piAmount)}）` : '';
+
+    document.getElementById('totalProjects').textContent = data.total_projects.toLocaleString();
+    const piCount = data.pi_count || 0;
+    const coCount = data.co_count || 0;
+    document.getElementById('roleCountSub').textContent =
+      `代表: ${piCount}件 / 分担: ${coCount}件`;
+
+    document.getElementById('amountAvailable').textContent = data.amount_available_count.toLocaleString();
+    document.getElementById('amountUnavailableSub').textContent =
+      `金額不明: ${data.amount_unavailable_count}件`;
+
+    // Badge
+    document.getElementById('tableBadge').textContent = `${data.total_projects}件`;
+
+    // Table
+    renderTable(currentProjects);
+    document.getElementById('tableCount').textContent =
+      `${data.researcher_name}${data.institution ? ' / ' + data.institution : ''} の検索結果`;
+
+    // Show
+    const resultsEl = document.getElementById('results');
+    resultsEl.style.display = 'block';
+    resultsEl.classList.add('show');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderTable(projects) {
+    const tbody = document.getElementById('projectTableBody');
+    tbody.innerHTML = '';
+
+    if (projects.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">該当する課題が見つかりませんでした</td></tr>';
+      return;
+    }
+
+    projects.forEach((p, i) => {
+      const tr = document.createElement('tr');
+      const amount = p.total_amount || 0;
+      const amountClass = amount > 0 ? 'amount' : 'amount zero';
+      const amountText = amount > 0 ? formatCurrency(amount) : '—';
+      const link = p.link
+        ? `<a href="${escapeHtml(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.title || '(無題)')}</a>`
+        : escapeHtml(p.title || '(無題)');
+      const category = p.category
+        ? `<span class="category-badge">${escapeHtml(p.category)}</span>`
+        : '<span style="color:var(--text-muted)">—</span>';
+
+      let roleBadge = '<span style="color:var(--text-muted)">—</span>';
+      if (p.role === '代表') {
+        roleBadge = '<span class="category-badge" style="background:#e6f7f1;color:#0d7c5f;font-weight:600;">代表</span>';
+      } else if (p.role === '分担') {
+        roleBadge = '<span class="category-badge" style="background:#fef9e7;color:#b8860b;">分担</span>';
+      } else if (p.role === '連携') {
+        roleBadge = '<span class="category-badge" style="background:#f0f2f5;color:#5c6370;">連携</span>';
+      } else if (p.role) {
+        roleBadge = `<span class="category-badge">${escapeHtml(p.role)}</span>`;
+      }
+
+      tr.innerHTML = `
+        <td class="number">${i + 1}</td>
+        <td class="number">${escapeHtml(p.project_number || '—')}</td>
+        <td class="title-cell">${link}</td>
+        <td>${roleBadge}</td>
+        <td>${category}</td>
+        <td class="number">${escapeHtml(p.period || '—')}</td>
+        <td class="${amountClass}">${amountText}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ──── Sort ────
+  function sortTable(col) {
+    if (sortCol === col) {
+      sortAsc = !sortAsc;
+    } else {
+      sortCol = col;
+      sortAsc = true;
+    }
+
+    // Update header styling
+    document.querySelectorAll('th').forEach((th, i) => {
+      th.classList.toggle('sorted', i === col);
+      const arrow = th.querySelector('.sort-arrow');
+      if (arrow) arrow.textContent = (i === col && !sortAsc) ? '▲' : '▼';
+    });
+
+    const keys = ['_index', 'project_number', 'title', 'role', 'category', 'period', 'total_amount'];
+    const key = keys[col];
+
+    currentProjects.sort((a, b) => {
+      let va = key === '_index' ? currentProjects.indexOf(a) : (a[key] || '');
+      let vb = key === '_index' ? currentProjects.indexOf(b) : (b[key] || '');
+      if (key === 'total_amount') {
+        va = Number(va) || 0;
+        vb = Number(vb) || 0;
+      }
+      if (va < vb) return sortAsc ? -1 : 1;
+      if (va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    renderTable(currentProjects);
+  }
+
+  // ──── CSV export ────
+  function exportCSV() {
+    if (currentProjects.length === 0) return;
+
+    const BOM = '\uFEFF';
+    const header = ['No.', '課題番号', '課題名', '役割', '研究種目', '研究期間', '配分額（円）', 'リンク'];
+    const rows = currentProjects.map((p, i) => [
+      i + 1,
+      p.project_number || '',
+      `"${(p.title || '').replace(/"/g, '""')}"`,
+      p.role || '',
+      p.category || '',
+      p.period || '',
+      p.total_amount || 0,
+      p.link || '',
+    ]);
+
+    const csv = BOM + [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kakenhi_${document.getElementById('researcherName').value.trim()}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ──── Clear ────
+  function clearForm() {
+    document.getElementById('searchForm').reset();
+    document.getElementById('results').style.display = 'none';
+    hideStatus();
+    currentProjects = [];
+  }
+
+  // ──── Helpers ────
+  function formatCurrency(n) {
+    return Number(n).toLocaleString('ja-JP');
+  }
+  function formatManYen(n) {
+    const man = Math.floor(n / 10000);
+    return man.toLocaleString('ja-JP') + '万円';
+  }
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>
