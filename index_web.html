@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>科研費検索ツール（Web）</title>
+</head>
+<body>
+<h2>科研費検索（Web版）</h2>
+
+<p>
+研究者名（必須）<br>
+<input id="name">
+</p>
+
+<p>
+所属機関（任意）<br>
+<input id="institution">
+</p>
+
+<button onclick="search()">検索</button>
+
+<pre id="result"></pre>
+
+<script>
+async function search() {
+  const name = document.getElementById("name").value;
+  const institution = document.getElementById("institution").value;
+  const res = await fetch(
+    `/api/search?name=${encodeURIComponent(name)}&institution=${encodeURIComponent(institution)}`
+  );
+  const json = await res.json();
+  document.getElementById("result").textContent =
+    JSON.stringify(json, null, 2);
+}
+</script>
+</body>
+</html>
+``
