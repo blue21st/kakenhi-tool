@@ -475,23 +475,6 @@
           </div>
         </div>
 
-        <button type="button" class="settings-toggle" onclick="toggleSettings()">
-          <span class="arrow" id="settingsArrow">▶</span>
-          API設定
-        </button>
-        <div class="settings-content" id="settingsContent">
-          <div class="form-group">
-            <label>CiNii Application ID<span class="optional">任意</span></label>
-            <input type="text" id="appid" placeholder="取得済みのappidを入力">
-            <div class="form-hint">
-              <a href="https://support.nii.ac.jp/ja/cinii/api/developer" target="_blank" rel="noopener">
-                CiNii API利用登録ページ
-              </a>
-              で取得できます。未入力でも基本的な検索は可能です。
-            </div>
-          </div>
-        </div>
-
         <div class="btn-group">
           <button type="submit" class="btn btn-primary" id="searchBtn">
             <span id="searchBtnText">検索・集計</span>
@@ -502,6 +485,18 @@
       </form>
 
       <div class="status-bar" id="statusBar"></div>
+    </div>
+  </div>
+
+  <!-- Login Overlay -->
+  <div id="loginOverlay" style="display:none; position:fixed; inset:0; background:rgba(26,26,46,0.85); z-index:9999; display:flex; align-items:center; justify-content:center;">
+    <div style="background:var(--surface); border-radius:var(--radius-lg); padding:2.5rem; max-width:380px; width:90%; box-shadow:var(--shadow-lg); text-align:center;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🔒</div>
+      <h2 style="font-size:1.1rem; font-weight:600; color:var(--accent); margin-bottom:0.3rem;">科研費取得合計算出ツール</h2>
+      <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1.5rem;">アクセスにはパスワードが必要です</p>
+      <input type="password" id="loginPassword" placeholder="パスワードを入力" style="width:100%;padding:0.65rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;font-family:inherit;outline:none;margin-bottom:0.75rem;" onkeydown="if(event.key==='Enter')doLogin()">
+      <div id="loginError" style="font-size:0.78rem;color:var(--error);margin-bottom:0.75rem;display:none;"></div>
+      <button onclick="doLogin()" style="width:100%;padding:0.7rem;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:inherit;font-size:0.88rem;font-weight:500;cursor:pointer;">ログイン</button>
     </div>
   </div>
 
@@ -586,14 +581,6 @@
   let sortCol = -1;
   let sortAsc = true;
 
-  // ──── Settings toggle ────
-  function toggleSettings() {
-    const content = document.getElementById('settingsContent');
-    const arrow = document.getElementById('settingsArrow');
-    const isOpen = content.classList.toggle('open');
-    arrow.classList.toggle('open', isOpen);
-  }
-
   // ──── Status helpers ────
   function showStatus(msg, type = 'info') {
     const bar = document.getElementById('statusBar');
@@ -604,12 +591,45 @@
     document.getElementById('statusBar').className = 'status-bar';
   }
 
+  // ──── Login ────
+  const NEED_PASSWORD = __NEED_PASSWORD__;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (NEED_PASSWORD) {
+      document.getElementById('loginOverlay').style.display = 'flex';
+      setTimeout(() => document.getElementById('loginPassword').focus(), 100);
+    } else {
+      document.getElementById('loginOverlay').style.display = 'none';
+    }
+  });
+
+  async function doLogin() {
+    const pw = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    try {
+      const resp = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        document.getElementById('loginOverlay').style.display = 'none';
+      } else {
+        errEl.textContent = data.error || 'ログインに失敗しました';
+        errEl.style.display = 'block';
+      }
+    } catch (err) {
+      errEl.textContent = '通信エラー: ' + err.message;
+      errEl.style.display = 'block';
+    }
+  }
+
   // ──── Search handler ────
   async function handleSearch(e) {
     e.preventDefault();
     const name = document.getElementById('researcherName').value.trim();
     const institution = document.getElementById('institution').value.trim();
-    const appid = document.getElementById('appid').value.trim();
 
     if (!name) {
       showStatus('研究者名を入力してください', 'error');
@@ -626,13 +646,15 @@
     try {
       const params = new URLSearchParams({ name });
       if (institution) params.append('institution', institution);
-      if (appid) params.append('appid', appid);
 
       const resp = await fetch(`/api/search?${params}`);
       const data = await resp.json();
 
       if (data.error) {
         showStatus(data.error, 'error');
+        if (resp.status === 401 && NEED_PASSWORD) {
+          document.getElementById('loginOverlay').style.display = 'flex';
+        }
         return false;
       }
 
