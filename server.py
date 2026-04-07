@@ -200,7 +200,7 @@ class KakenHandler(http.server.SimpleHTTPRequestHandler):
             if not items or (total and len(all_projects) >= total):
                 break
             start += per_page
-            time.sleep(1)
+            time.sleep(0.3)
 
         if all_projects:
             log("INFO", f"各課題の詳細を取得中... ({len(all_projects)}件)")
@@ -247,7 +247,7 @@ class KakenHandler(http.server.SimpleHTTPRequestHandler):
 
         return p if p["title"] else None
 
-    # ─── 詳細取得（3並列） ───
+    # ─── 詳細取得（5並列・高速版） ───
 
     def enrich_with_detail(self, projects):
         tasks = []
@@ -270,10 +270,9 @@ class KakenHandler(http.server.SimpleHTTPRequestHandler):
         done = 0
         def fetch_detail(args):
             idx, proj, url = args
-            time.sleep(0.2)
             return idx, proj, self.fetch_json(url)
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=5) as executor:
             futures = {executor.submit(fetch_detail, t): t for t in tasks}
             for future in as_completed(futures):
                 idx, proj, detail = future.result()
